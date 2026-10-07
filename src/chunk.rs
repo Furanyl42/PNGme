@@ -1,15 +1,18 @@
 #![allow(unused_variables)]
+#![allow(dead_code)]
+use std::string::FromUtf8Error;
 
 use crate::chunk_type::ChunkType;
+use anyhow::{Result, anyhow};
 use crc::*;
+use std::fmt;
 
-struct Chunk {
+pub struct Chunk {
     length: u32,
     chunk_type: ChunkType,
     data: Vec<u8>,
     crc: u32,
 }
-// TRYFROM
 impl Chunk {
     pub fn new(chunk_type: ChunkType, data: Vec<u8>) -> Self {
         let chunk_bytes = chunk_type.bytes();
@@ -18,7 +21,7 @@ impl Chunk {
             length: data.len() as u32,
             chunk_type,
             data,
-            crc: Crc::<u32>::new(&CRC_32_CKSUM).checksum(&bytes),
+            crc: Crc::<u32>::new(&CRC_32_ISO_HDLC).checksum(&bytes),
         }
     }
 
@@ -37,6 +40,53 @@ impl Chunk {
     pub fn crc(&self) -> u32 {
         self.crc
     }
+    pub fn data_as_string(&self) -> Result<String, FromUtf8Error> {
+        String::from_utf8(self.data.clone())
+    }
+}
+impl TryFrom<&[u8]> for Chunk {
+    type Error = anyhow::Error;
+
+    fn try_from(value: &[u8]) -> Result<Self, Self::Error> {
+        let bytes: Vec<u8> = value.to_vec();
+        let bytes_as_slice: &[u8] = &bytes;
+        let Some(_) = bytes_as_slice.get(8 - 1) else {
+            return Err(anyhow!("No type in Chunk"));
+        };
+        let type_bytes: [u8; 4] = bytes_as_slice[4..=7].try_into().unwrap();
+        let len = bytes_to_u32_be(&bytes[0..=3]);
+        let Some(_) = bytes_as_slice.get(8 + len as usize - 1) else {
+            return Err(anyhow!("No data in Chunk"));
+        };
+        let mut result = Chunk::new(
+            ChunkType::try_from(type_bytes)?,
+            bytes_as_slice[8..8 + len as usize].to_vec(),
+        );
+        let Some(_) = bytes_as_slice.get(8 + len as usize + 4 - 1) else {
+            result.crc =
+                Crc::<u32>::new(&CRC_32_ISO_HDLC).checksum(&bytes_as_slice[4..8 + len as usize]);
+            return Ok(result);
+        };
+        let input_crc = bytes_to_u32_be(&bytes[8 + len as usize..8 + len as usize + 4]);
+        if input_crc
+            != Crc::<u32>::new(&CRC_32_ISO_HDLC).checksum(&bytes_as_slice[4..8 + len as usize])
+        {
+            return Err(anyhow!("input CRC is not valid"));
+        }
+        Ok(result)
+    }
+}
+impl fmt::Display for Chunk {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        let s = self.data_as_string().unwrap();
+        write!(f, "{}", s)
+    }
+}
+fn bytes_to_u32_be(bytes: &[u8]) -> u32 {
+    ((bytes[0] as u32) << 24)
+        + ((bytes[1] as u32) << 16)
+        + ((bytes[2] as u32) << 8)
+        + (bytes[3] as u32)
 }
 
 #[cfg(test)]
