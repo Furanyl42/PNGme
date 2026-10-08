@@ -7,6 +7,7 @@ use anyhow::{Result, anyhow};
 use crc::*;
 use std::fmt;
 
+#[derive(Clone)]
 pub struct Chunk {
     length: u32,
     chunk_type: ChunkType,
@@ -78,8 +79,13 @@ impl TryFrom<&[u8]> for Chunk {
 }
 impl fmt::Display for Chunk {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        let s = self.data_as_string().unwrap();
-        write!(f, "{}", s)
+        writeln!(f, "Chunk {{",)?;
+        writeln!(f, "  Length: {}", self.length())?;
+        writeln!(f, "  Type: {}", self.chunk_type())?;
+        writeln!(f, "  Data: {} bytes", self.data().len())?;
+        writeln!(f, "  Crc: {}", self.crc())?;
+        writeln!(f, "}}",)?;
+        Ok(())
     }
 }
 fn bytes_to_u32_be(bytes: &[u8]) -> u32 {
