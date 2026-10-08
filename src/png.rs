@@ -1,14 +1,70 @@
+#![allow(dead_code)]
+#![allow(unused_imports)]
 use crate::chunk::Chunk;
+use crate::chunk_type::ChunkType;
 use anyhow::{Result, anyhow};
 use std::fmt;
+use std::str::FromStr;
 
-struct Png {
+#[derive(Clone)]
+pub struct Png {
     header: [u8; 8],
     chunks: Vec<Chunk>,
 }
 
 impl Png {
     const STANDARD_HEADER: [u8; 8] = [137, 80, 78, 71, 13, 10, 26, 10];
+
+    fn from_chunks(chunks: Vec<Chunk>) -> Png {
+        Self {
+            header: Self::STANDARD_HEADER,
+            chunks,
+        }
+    }
+
+    fn append_chunk(&mut self, chunk: Chunk) {
+        self.chunks.push(chunk);
+    }
+
+    fn remove_first_chunk(&mut self, chunk_type: &str) -> Result<Chunk> {
+        let mut id_to_remove = -1;
+        let mut return_chunk = Chunk::default();
+        if let Some(idx) = self
+            .chunks
+            .iter()
+            .position(|t| t.chunk_type().to_string() == chunk_type)
+        {
+            if let Some(removed_chunk) = self.chunks.get(idx) {
+                id_to_remove = idx as i32;
+                return_chunk = (*removed_chunk).clone();
+            };
+        } else {
+            return Err(anyhow!("Didnt find the chunk to remove"));
+        }
+        self.chunks.remove(id_to_remove as usize);
+        Ok(return_chunk)
+    }
+
+    fn header(&self) -> &[u8; 8] {
+        &self.header
+    }
+
+    fn chunks(&self) -> &[Chunk] {
+        &self.chunks
+    }
+
+    fn chunk_by_type(&self, chunk_type: &str) -> Option<&Chunk> {
+        self.chunks
+            .iter()
+            .find(|&t| t.chunk_type().to_string() == chunk_type)
+    }
+
+    pub fn as_bytes(&self) -> Vec<u8> {
+        self.chunks
+            .iter()
+            .flat_map(|b| b.data().iter().copied())
+            .collect()
+    }
 }
 
 impl TryFrom<&[u8]> for Png {
@@ -17,8 +73,13 @@ impl TryFrom<&[u8]> for Png {
         let mut chunklist: Vec<Chunk> = Vec::new();
         let mut idx = 0usize;
         loop {
+            for b in value {
+                //    print!("{}", b);
+            }
+            println!("===");
             if let Ok(chunk) = Chunk::try_from(&value[idx..]) {
                 chunklist.push(chunk.clone());
+                println!("{}", chunk.clone());
                 idx = 8 + chunk.length() as usize + 4;
             } else {
                 return Err(anyhow!("Invalid chunk"));
@@ -44,7 +105,6 @@ impl fmt::Display for Png {
         Ok(())
     }
 }
-// TODO: FROM_CHUNKS
 #[cfg(test)]
 mod tests {
     use super::*;

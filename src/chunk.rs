@@ -25,7 +25,14 @@ impl Chunk {
             crc: Crc::<u32>::new(&CRC_32_ISO_HDLC).checksum(&bytes),
         }
     }
-
+    pub fn default() -> Self {
+        Self {
+            length: 0,
+            chunk_type: ChunkType::default(),
+            data: Vec::new(),
+            crc: 0,
+        }
+    }
     pub fn length(&self) -> u32 {
         self.length
     }
@@ -44,6 +51,9 @@ impl Chunk {
     pub fn data_as_string(&self) -> Result<String, FromUtf8Error> {
         String::from_utf8(self.data.clone())
     }
+    pub fn as_bytes(&self) -> Vec<u8> {
+        self.data.clone()
+    }
 }
 impl TryFrom<&[u8]> for Chunk {
     type Error = anyhow::Error;
@@ -56,6 +66,7 @@ impl TryFrom<&[u8]> for Chunk {
         };
         let type_bytes: [u8; 4] = bytes_as_slice[4..=7].try_into().unwrap();
         let len = bytes_to_u32_be(&bytes[0..=3]);
+        println!("Length: {}", len);
         let Some(_) = bytes_as_slice.get(8 + len as usize - 1) else {
             return Err(anyhow!("No data in Chunk"));
         };

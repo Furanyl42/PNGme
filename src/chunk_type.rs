@@ -12,6 +12,11 @@ impl ChunkType {
     pub fn new(value: [u8; 4]) -> Self {
         Self { data: value }
     }
+
+    pub fn default() -> Self {
+        Self { data: [0; 4] }
+    }
+
     pub fn bytes(&self) -> [u8; 4] {
         self.data
     }
