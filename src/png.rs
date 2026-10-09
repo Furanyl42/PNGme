@@ -71,16 +71,11 @@ impl TryFrom<&[u8]> for Png {
     type Error = anyhow::Error;
     fn try_from(value: &[u8]) -> Result<Self, Self::Error> {
         let mut chunklist: Vec<Chunk> = Vec::new();
-        let mut idx = 0usize;
+        let mut idx = 8usize;
         loop {
-            for b in value {
-                //    print!("{}", b);
-            }
-            println!("===");
             if let Ok(chunk) = Chunk::try_from(&value[idx..]) {
                 chunklist.push(chunk.clone());
-                println!("{}", chunk.clone());
-                idx = 8 + chunk.length() as usize + 4;
+                idx += 4 + 4 + chunk.length() as usize + 4;
             } else {
                 return Err(anyhow!("Invalid chunk"));
             }
