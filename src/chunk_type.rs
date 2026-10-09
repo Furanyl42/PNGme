@@ -2,7 +2,7 @@
 #![allow(dead_code)]
 use anyhow::{Result, anyhow};
 use std::fmt;
-use std::str::FromStr;
+use std::str::{FromStr, from_utf8};
 #[derive(PartialEq, Debug, Clone)]
 pub struct ChunkType {
     data: [u8; 4],
@@ -46,7 +46,11 @@ impl ChunkType {
         self.is_reserved_bit_valid()
     }
 }
-
+impl PartialEq<str> for ChunkType {
+    fn eq(&self, other: &str) -> bool {
+        from_utf8(&self.data).unwrap() == other
+    }
+}
 impl TryFrom<[u8; 4]> for ChunkType {
     type Error = anyhow::Error;
     fn try_from(value: [u8; 4]) -> Result<Self, Self::Error> {

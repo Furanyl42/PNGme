@@ -27,12 +27,18 @@ impl Png {
     }
 
     fn remove_first_chunk(&mut self, chunk_type: &str) -> Result<Chunk> {
-        let mut id_to_remove = -1;
+        let pos = self
+            .chunks
+            .iter()
+            .position(|t| t.chunk_type() == chunk_type)
+            .ok_or_else(|| anyhow!("Didnt find the chunk to remove"))?;
+        Ok(self.chunks.remove(pos))
+        /*let mut id_to_remove = -1;
         let mut return_chunk = Chunk::default();
         if let Some(idx) = self
             .chunks
             .iter()
-            .position(|t| t.chunk_type().to_string() == chunk_type)
+            .position(|t| t.chunk_type() == chunk_type)
         {
             if let Some(removed_chunk) = self.chunks.get(idx) {
                 id_to_remove = idx as i32;
@@ -42,7 +48,7 @@ impl Png {
             return Err(anyhow!("Didnt find the chunk to remove"));
         }
         self.chunks.remove(id_to_remove as usize);
-        Ok(return_chunk)
+        Ok(return_chunk)*/
     }
 
     fn header(&self) -> &[u8; 8] {
@@ -54,9 +60,7 @@ impl Png {
     }
 
     fn chunk_by_type(&self, chunk_type: &str) -> Option<&Chunk> {
-        self.chunks
-            .iter()
-            .find(|&t| t.chunk_type().to_string() == chunk_type)
+        self.chunks.iter().find(|&t| t.chunk_type() == chunk_type)
     }
 
     pub fn as_bytes(&self) -> Vec<u8> {
