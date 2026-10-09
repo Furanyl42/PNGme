@@ -67,7 +67,7 @@ impl Png {
         self.header
             .iter()
             .copied()
-            .chain(self.chunks.iter().flat_map(|b| b.data().iter().copied()))
+            .chain(self.chunks.iter().flat_map(|b| b.as_bytes()))
             .collect()
     }
 }
@@ -75,17 +75,31 @@ impl Png {
 impl TryFrom<&[u8]> for Png {
     type Error = anyhow::Error;
     fn try_from(value: &[u8]) -> Result<Self, Self::Error> {
+        if value.len() < 8 {
+            return Err(anyhow!("File is too small to be valid PNG"));
+        }
+
+        if value[..8] != Png::STANDARD_HEADER {
+            return Err(anyhow!("Invalid PNG header"));
+        }
         let mut chunklist: Vec<Chunk> = Vec::new();
         let mut idx = 8usize;
-        loop {
+
+        while idx < value.len() {
+            if idx + 12 > value.len() {
+                return Err(anyhow!("Remaining slice is too small"));
+            }
             if let Ok(chunk) = Chunk::try_from(&value[idx..]) {
+                let total_chunk_size = 4 + 4 + chunk.length() as usize + 4;
+                if idx.checked_add(total_chunk_size).is_none()
+                    || idx + total_chunk_size > value.len()
+                {
+                    return Err(anyhow!("Chunk length is greater than number of bytes"));
+                }
                 chunklist.push(chunk.clone());
-                idx += 4 + 4 + chunk.length() as usize + 4;
+                idx += total_chunk_size;
             } else {
                 return Err(anyhow!("Invalid chunk"));
-            }
-            if idx >= value.len() {
-                break;
             }
         }
         Ok(Self {

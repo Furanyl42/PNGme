@@ -52,7 +52,14 @@ impl Chunk {
         String::from_utf8(self.data.clone())
     }
     pub fn as_bytes(&self) -> Vec<u8> {
-        self.data.clone()
+        self.length()
+            .to_be_bytes()
+            .iter()
+            .copied()
+            .chain(self.chunk_type.bytes().iter().copied())
+            .chain(self.data.iter().copied())
+            .chain(self.crc().to_be_bytes().iter().copied())
+            .collect()
     }
 }
 impl TryFrom<&[u8]> for Chunk {
@@ -66,7 +73,10 @@ impl TryFrom<&[u8]> for Chunk {
         };
         let type_bytes: [u8; 4] = bytes_as_slice[4..=7].try_into().unwrap();
         let len = bytes_to_u32_be(&bytes[0..=3]);
-        println!("Length: {}", len);
+        if 12 + len as usize > value.len() {
+            return Err(anyhow!("Not enough bytes according to length"));
+        }
+        println!("Len: {}", len);
         let Some(_) = bytes_as_slice.get(8 + len as usize - 1) else {
             return Err(anyhow!("No data in Chunk"));
         };
@@ -75,9 +85,10 @@ impl TryFrom<&[u8]> for Chunk {
             bytes_as_slice[8..8 + len as usize].to_vec(),
         );
         let Some(_) = bytes_as_slice.get(8 + len as usize + 4 - 1) else {
-            result.crc =
-                Crc::<u32>::new(&CRC_32_ISO_HDLC).checksum(&bytes_as_slice[4..8 + len as usize]);
-            return Ok(result);
+            return Err(anyhow!("No CRC in the chunk"));
+            //result.crc =
+            //    Crc::<u32>::new(&CRC_32_ISO_HDLC).checksum(&bytes_as_slice[4..8 + len as usize]);
+            //return Ok(result);
         };
         let input_crc = bytes_to_u32_be(&bytes[8 + len as usize..8 + len as usize + 4]);
         if input_crc
@@ -99,7 +110,7 @@ impl fmt::Display for Chunk {
         Ok(())
     }
 }
-fn bytes_to_u32_be(bytes: &[u8]) -> u32 {
+pub fn bytes_to_u32_be(bytes: &[u8]) -> u32 {
     ((bytes[0] as u32) << 24)
         + ((bytes[1] as u32) << 16)
         + ((bytes[2] as u32) << 8)

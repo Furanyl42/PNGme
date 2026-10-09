@@ -1,9 +1,10 @@
+#![allow(unused)]
 mod args;
 mod chunk;
 mod chunk_type;
 mod commands;
 mod png;
-use crate::chunk::Chunk;
+use crate::chunk::*;
 use crate::png::Png;
 pub type Error = Box<dyn std::error::Error>;
 pub type Result<T> = std::result::Result<T, Error>;
@@ -260,7 +261,8 @@ fn test_as_bytes() {
         160, 0, 0, 0, 0, 73, 69, 78, 68, 174, 66, 96, 130,
     ];
     //let ch = Chunk::try_from(&PNG_FILE[8..]).unwrap();
-
+    //let ch2 = Chunk::try_from(&PNG_FILE[4 + 4 + ch.length() as usize + 4..]).unwrap();
+    //println!("{:?}", ch2.as_bytes());
     let png = Png::try_from(&PNG_FILE[..]).unwrap();
     //let actual = png.as_bytes();
     //let expected: Vec<u8> = PNG_FILE.to_vec();
