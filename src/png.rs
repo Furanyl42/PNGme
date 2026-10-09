@@ -60,9 +60,10 @@ impl Png {
     }
 
     pub fn as_bytes(&self) -> Vec<u8> {
-        self.chunks
+        self.header
             .iter()
-            .flat_map(|b| b.data().iter().copied())
+            .copied()
+            .chain(self.chunks.iter().flat_map(|b| b.data().iter().copied()))
             .collect()
     }
 }
