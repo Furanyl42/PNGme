@@ -22,11 +22,11 @@ impl Png {
         }
     }
 
-    fn append_chunk(&mut self, chunk: Chunk) {
+    pub fn append_chunk(&mut self, chunk: Chunk) {
         self.chunks.push(chunk);
     }
 
-    fn remove_first_chunk(&mut self, chunk_type: &str) -> Result<Chunk> {
+    pub fn remove_first_chunk(&mut self, chunk_type: &str) -> Result<Chunk> {
         let pos = self
             .chunks
             .iter()
@@ -59,7 +59,7 @@ impl Png {
         &self.chunks
     }
 
-    fn chunk_by_type(&self, chunk_type: &str) -> Option<&Chunk> {
+    pub fn chunk_by_type(&self, chunk_type: &str) -> Option<&Chunk> {
         self.chunks.iter().find(|&t| t.chunk_type() == chunk_type)
     }
 
@@ -111,11 +111,9 @@ impl TryFrom<&[u8]> for Png {
 
 impl fmt::Display for Png {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        writeln!(f, "{{",)?;
         for chunk in self.chunks.clone() {
             writeln!(f, "{}", chunk)?;
         }
-        writeln!(f, "}}",)?;
         Ok(())
     }
 }

@@ -76,7 +76,7 @@ impl TryFrom<&[u8]> for Chunk {
         if 12 + len as usize > value.len() {
             return Err(anyhow!("Not enough bytes according to length"));
         }
-        println!("Len: {}", len);
+        //println!("Len: {}", len);
         let Some(_) = bytes_as_slice.get(8 + len as usize - 1) else {
             return Err(anyhow!("No data in Chunk"));
         };
